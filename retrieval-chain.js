@@ -6,6 +6,10 @@ import { CheerioWebBaseLoader } from "@langchain/community/document_loaders/web/
 
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
+import { OllamaEmbeddings } from "@langchain/ollama";
+import { MemoryVectorStore } from "@langchain/classic/vectorstores/memory";
+import { createRetrievalChain } from "@langchain/classic/chains/retrieval";
+
 const model = new ChatOllama({
     model: "llama3"
 })
@@ -28,10 +32,18 @@ const docs = await loader.load()
 
 const splitter = new RecursiveCharacterTextSplitter({chunkSize: 200, chunkOverlap: 20})
 const splitDocs = await splitter.splitDocuments(docs)
-console.log(splitDocs)
+// console.log(splitDocs)
 
-const response = await chain.invoke({
-    input: "what is LCEL?",
-    context: docs
+const embeddings = new OllamaEmbeddings({k: 2})
+const vectorStore = await MemoryVectorStore.fromDocuments(splitDocs, embeddings)
+const retriever = vectorStore.asRetriever()
+
+const retrievalChain = await createRetrievalChain({
+    combineDocsChain: chain,
+    retriever
 })
-// console.log(response);
+
+const response = await retrievalChain.invoke({ 
+    input: "what is LCEL?",
+})
+console.log(response);

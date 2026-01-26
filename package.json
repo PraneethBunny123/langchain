@@ -12,9 +12,11 @@
   "license": "ISC",
   "dependencies": {
     "@langchain/classic": "^1.0.10",
+    "@langchain/community": "^1.1.7",
     "@langchain/core": "^1.1.17",
     "@langchain/ollama": "^1.2.1",
-    "dotenv": "^17.2.3",
+    "@langchain/textsplitters": "^1.0.1",
+    "cheerio": "^1.2.0",
     "langchain": "^1.2.13",
     "ollama": "^0.6.3",
     "zod": "^4.3.6"

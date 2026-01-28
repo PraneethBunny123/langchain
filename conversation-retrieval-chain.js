@@ -9,6 +9,8 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
 import { MemoryVectorStore } from "@langchain/classic/vectorstores/memory";
 import { createRetrievalChain } from "@langchain/classic/chains/retrieval";
+import { createHistoryAwareRetriever } from "@langchain/classic/chains/history_aware_retriever";
+
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
 
 // load data and create vector store
@@ -20,7 +22,7 @@ async function createVectorStore() {
     const splitter = new RecursiveCharacterTextSplitter({chunkSize: 200, chunkOverlap: 20})
     const splitDocs = await splitter.splitDocuments(docs)
 
-    const embeddings = new OllamaEmbeddings()
+    const embeddings = new OllamaEmbeddings({model: "mxbai-embed-large"})
     const vectorStore = await MemoryVectorStore.fromDocuments(splitDocs, embeddings)
 
     return vectorStore
@@ -45,12 +47,25 @@ async function createChain(vectorStore) {
         ],
     ])
 
+    const retrieverPrompt = ChatPromptTemplate.fromMessages([
+        new MessagesPlaceholder("chat_history"),
+        ["human", "{input}"],
+        ["human", "Given the above conversation, generate a search query to look up in order to get information relevant to the conversation"],
+        
+    ])
+
     const chain = await createStuffDocumentsChain({
         llm: model,
         prompt
     })
 
-    const retriever = vectorStore.asRetriever({k: 2})
+    const retriever = vectorStore.asRetriever()
+
+    const historyAwareRetriever = await createHistoryAwareRetriever({
+        llm: model,
+        retriever,
+        rephrasePrompt: retrieverPrompt,
+    })
 
     const conversationChain = await createRetrievalChain({
         combineDocsChain: chain,
@@ -74,7 +89,7 @@ const chatHistory = [
 ]
 
 const response = await chain.invoke({ 
-    input: "what is my name?",
+    input: "Explain more about that?",
     chat_history: chatHistory
 })
 
